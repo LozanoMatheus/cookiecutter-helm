@@ -1,0 +1,26 @@
+{%- if 'servicemonitor' in cookiecutter.ports -%}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ "{{" }} .Release.Name {{ "}}" }}
+  namespace: {{ "{{" }} .Release.Namespace {{ "}}" }}
+  labels:
+    helm.sh/chart: {{ "{{" }} .Chart.Name {{ "}}" }}-{{ "{{" }} .Chart.Version | replace "+" "_" {{ "}}" }}
+    app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+    prometheus: kube-prometheus
+spec:
+  jobLabel: {{ "{{" }} .Release.Name {{ "}}" }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+  namespaceSelector:
+    matchNames:
+    - {{ "{{" }} .Release.Namespace {{ "}}" }}
+  endpoints:
+    - targetPort: {{ "{{" }} .Values.servicemonitor.port {{ "}}" }}
+      honorLabels: true
+      interval: 20s
+      path: /metrics-text
+{% endif -%}

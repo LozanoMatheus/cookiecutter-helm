@@ -1,0 +1,31 @@
+{
+    "app_name": "my-app",
+    "short_description": "A App",
+    "version": "0.1.0",
+    "maintainers": {
+        "who I am": "my@email.com",
+        "who are you": "your@email.com"
+    },
+    "deployment": [
+        "no",
+        "yes"
+    ],
+    "deployment_type": "service",
+    "ingress": [
+        "no",
+        "{% if cookiecutter.deployment == 'yes' %}yes{% else %}no{% endif %}"
+    ],
+    "internet_face": [
+        "yes",
+        "no"
+    ],
+    "dns_record": "",
+    "cronjob": [
+        "no",
+        "yes"
+    ],
+    "ports": {
+        "http": "5000",
+        "servicemonitor": "9372"
+    }
+}

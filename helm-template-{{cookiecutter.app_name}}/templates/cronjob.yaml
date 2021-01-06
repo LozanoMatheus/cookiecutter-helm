@@ -1,0 +1,84 @@
+{%- if cookiecutter.cronjob == 'yes' -%}
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ "{{" }} .Release.Name {{ "}}" }}
+  labels:
+    helm.sh/chart: {{ "{{" }} .Chart.Name {{ "}}" }}-{{ "{{" }} .Chart.Version | replace "+" "_" {{ "}}" }}
+    app.kubernetes.io/name: {{ "job-{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+  annotations:
+    {{ "{{" }} toYaml .Values.cronjob.annotations | indent 4 {{ "}}" }}
+spec:
+  schedule: "{{ "{{" }}- .Values.cronjob.schedule {{ "}}" }}"
+  concurrencyPolicy: {{ "{{" }}- if .Values.cronjob.concurrencyPolicy {{ "}}" }} {{ "{{" }} .Values.cronjob.concurrencyPolicy {{ "}}" }} {{ "{{" }} else {{ "}}" }} "Forbid" {{ "{{" }} end {{ "}}" }}
+  failedJobsHistoryLimit: {{ "{{" }}- if .Values.cronjob.failedJobsHistoryLimit {{ "}}" }} {{ "{{" }} .Values.cronjob.failedJobsHistoryLimit {{ "}}" }} {{ "{{" }} else {{ "}}" }} 5 {{ "{{" }} end {{ "}}" }}
+  successfulJobsHistoryLimit: {{ "{{" }}- if .Values.cronjob.successfulJobsHistoryLimit {{ "}}" }} {{ "{{" }} .Values.cronjob.successfulJobsHistoryLimit {{ "}}" }} {{ "{{" }} else {{ "}}" }} 10 {{ "{{" }} end {{ "}}" }}
+  startingDeadlineSeconds: {{ "{{" }}- if .Values.cronjob.startingDeadlineSeconds {{ "}}" }} {{ "{{" }} .Values.cronjob.startingDeadlineSeconds {{ "}}" }} {{ "{{" }} else {{ "}}" }} 1200 {{ "{{" }} end {{ "}}" }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+            app.kubernetes.io/name: {{ "job-{{" }} .Release.Name {{ "}}" }}
+          annotations:
+{{ "{{" }}- with .Values.podAnnotations {{ "}}" }}
+{{ "{{" }} toYaml . | indent 12 {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if .Values.configMaps {{ "}}" }}
+            configmap.reloader.stakater.com/reload: {{ "{{" }} join ", " .Values.configMaps | quote {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+        spec:
+          containers:
+          - name: {{ "{{" }} .Release.Name {{ "}}" }}
+            image: {{ "{{" }} .Values.image.repository {{ "}}" }}:{{ "{{" }} .Values.image.tag | replace "+" "-" | lower {{ "}}" }}
+            imagePullPolicy: {{ "{{" }} .Values.image.pullPolicy {{ "}}" }}
+            command: {{ "{{" }} .Values.cronjob.command {{ "}}" }}
+            args: {{ "{{" }} .Values.cronjob.args {{ "}}" }}
+            env:
+            {{ "{{" }}- if .Values.extraEnv {{ "}}" }}
+              {{ "{{" }}- range $key, $value := .Values.extraEnv {{ "}}" }}
+            - name: {{ "{{" }} $key {{ "}}" }}
+              value: {{ "{{" }} $value | quote {{ "}}" }}
+              {{ "{{" }}- end {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}
+            {{ "{{" }}- if .Values.extraVars {{ "}}" }}
+                {{ "{{" }}- range $key, $value := .Values.extraVars {{ "}}" }}
+            - name: {{ "{{" }} $key {{ "}}" }}
+              value: {{ "{{" }} $value | quote {{ "}}" }}
+                {{ "{{" }}- end {{ "}}" }}
+            {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if .Values.configMaps {{ "}}" }}
+            envFrom:
+      {{ "{{" }}- range .Values.configMaps {{ "}}" }}
+            - configMapRef:
+                name: {{ "{{" }} . | quote {{ "}}" }}
+      {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          restartPolicy: {{ "{{" }} .Values.cronjob.restartPolicy {{ "}}" }}
+{{ "{{" }}- if .Values.affinity {{ "}}" }}
+    {{ "{{" }}- with .Values.affinity {{ "}}" }}
+          affinity:
+{{ "{{" }} toYaml . | indent 12 {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- else {{ "}}" }}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: subnet
+                    operator: In
+                    values:
+                    - "{% if cookiecutter.internet_face == 'yes' %}public{% else %}private{% endif %}"
+{{ "{{" }}- end {{ "}}" }}
+{% endif -%}

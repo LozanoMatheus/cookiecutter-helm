@@ -1,0 +1,17 @@
+name: {{ cookiecutter.app_name }}
+version: "{{ cookiecutter.version }}"
+appVersion: "{{ cookiecutter.version }}"
+apiVersion : "v1"
+home: https://github.com/lozanomatheus/{{ cookiecutter.app_name }}
+description: {{ cookiecutter.short_description }}
+sources:
+  - https://github.com/lozanomatheus/{{ cookiecutter.app_name }}
+maintainers:
+{%- set maintainers = [cookiecutter.maintainers] %}
+{%- for dict_item in maintainers %}
+  {%- for name, email in dict_item.items() %}
+  - name: {{ name }}
+    email: {{ email }}
+  {%- endfor %}
+{%- endfor %}
+engine: gotpl

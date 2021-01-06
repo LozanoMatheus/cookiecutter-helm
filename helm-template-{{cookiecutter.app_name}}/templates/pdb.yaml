@@ -1,0 +1,26 @@
+{%- if cookiecutter.deployment == 'yes' -%}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    helm.sh/chart: {{ "{{" }} .Chart.Name {{ "}}" }}-{{ "{{" }} .Chart.Version | replace "+" "_" {{ "}}" }}
+    app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+  name: {{ "{{" }} .Release.Name {{ "}}" }}
+spec:
+{{" {{" }}- if .Values.podDisruptionBudget {{ "}}" }}
+{{" {{" }}- if .Values.podDisruptionBudget.enabled {{ "}}" }}
+  minAvailable: {{" {{" }} .Values.podDisruptionBudget.minAvailable {{ "}}" }}
+  maxUnavailable: {{" {{" }} .Values.podDisruptionBudget.maxUnavailable {{ "}}" }}
+{{" {{" }}- else {{ "}}" }}
+  minAvailable: 1
+{{" {{" }}- end {{ "}}" }}
+{{" {{" }}- else {{ "}}" }}
+  minAvailable: 1
+{{" {{" }}- end {{ "}}" }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+      app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+{% endif -%}

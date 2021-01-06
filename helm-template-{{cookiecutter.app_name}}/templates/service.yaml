@@ -1,0 +1,21 @@
+{%- if cookiecutter.deployment == 'yes' -%}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ "{{" }} .Release.Name {{ "}}" }}
+  labels:
+    helm.sh/chart: {{ "{{" }} .Chart.Name {{ "}}" }}-{{ "{{" }} .Chart.Version | replace "+" "_" {{ "}}" }}
+    app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+spec:
+  type: {{ "{{" }} .Values.service.type {{ "}}" }}
+  ports:
+    - name: http
+      targetPort: http
+      protocol: TCP
+      port: {{ "{{" }}- if .Values.service.port {{ "}}" }} {{ "{{" }} .Values.service.port {{ "}}" }} {{ "{{" }} else {{ "}}" }} {{ cookiecutter.ports["http"] }} {{ "{{" }} end {{ "}}" }}
+  selector:
+    app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+{% endif -%}

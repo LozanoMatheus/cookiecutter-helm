@@ -1,0 +1,18 @@
+{
+    "cookiecutter": {
+        "app_name": "test001",
+        "version": "1.0.0",
+        "deployment": "yes",
+        "deployment_type": "service",
+        "ports": {
+            "http": "8080"
+        },
+        "_template": "https://github.com/lozanomatheus/test001",
+        "cronjob": "",
+        "dns_record": "",
+        "ingress": "yes",
+        "internet_face": "no",
+        "maintainers": {},
+        "short_description": ""
+    }
+}

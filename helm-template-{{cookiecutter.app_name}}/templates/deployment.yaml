@@ -1,0 +1,113 @@
+{%- if cookiecutter.deployment == 'yes' -%}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ "{{" }} .Release.Name {{ "}}" }}
+  labels:
+    helm.sh/chart: {{ "{{" }} .Chart.Name {{ "}}" }}-{{ "{{" }} .Chart.Version | replace "+" "_" {{ "}}" }}
+    app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+    app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+spec:
+  replicas: {{ "{{" }}- if lt .Values.replicaCount 2.0 {{ "}}" }} 2 {{ "{{" }} else {{ "}}" }} {{ "{{" }} .Values.replicaCount {{ "}}" }} {{ "{{" }} end {{ "}}" }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+      app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ "{{" }} .Release.Name {{ "}}" }}
+        app.kubernetes.io/instance: {{ "{{" }} .Release.Name {{ "}}" }}
+        app.kubernetes.io/managed-by: {{ "{{" }} .Release.Service {{ "}}" }}
+      annotations:
+{{ "{{" }}- with .Values.podAnnotations {{ "}}" }}
+{{ "{{" }} toYaml . | indent 8 {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if .Values.configMaps {{ "}}" }}
+        configmap.reloader.stakater.com/reload: {{ "{{" }} join ", " .Values.configMaps | quote {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+    spec:
+      containers:
+        - name: {{ "{{" }} .Release.Name {{ "}}" }}
+          image: {{ "{{" }} .Values.image.repository {{ "}}" }}:{{ "{{" }} .Values.image.tag | replace "+" "-" | lower {{ "}}" }}
+          imagePullPolicy: {{ "{{" }} .Values.image.pullPolicy {{ "}}" }}
+{{ "{{" }}- if .Values.deployment {{ "}}" }}
+{{ "{{" }}- with .Values.deployment.command {{ "}}" }}
+          command:
+{{ "{{" }} toYaml . | indent 12 {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+          ports:
+            {%- for port in cookiecutter.ports %}
+            - name: {{ "{{" }}- if .Values.container.port_name {{ "}}" }} {{ "{{" }} .Values.container.port_name | quote {{ "}}" }} {{ "{{" }} else {{ "}}" }} "{{ port }}" {{ "{{" }} end {{ "}}" }}
+              containerPort: {{ "{{" }}- if .Values.container.port {{ "}}" }} {{ "{{" }} .Values.container.port {{ "}}" }} {{ "{{" }} else {{ "}}" }} {{ cookiecutter.ports[port] }} {{ "{{" }} end {{ "}}" }}
+              protocol: TCP
+            {%- endfor %}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: {{ "{{" }}- if .Values.container.port {{ "}}" }} {{ "{{" }} .Values.container.port {{ "}}" }} {{ "{{" }} else {{ "}}" }} {{ cookiecutter.ports.http }} {{ "{{" }} end {{ "}}" }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ "{{" }}- if .Values.container.port {{ "}}" }} {{ "{{" }} .Values.container.port {{ "}}" }} {{ "{{" }} else {{ "}}" }} {{ cookiecutter.ports.http }} {{ "{{" }} end {{ "}}" }} 
+            initialDelaySeconds: 45
+            periodSeconds: 20
+          env:
+{{ "{{" }}- if .Values.extraEnv {{ "}}" }}
+    {{ "{{" }}- range $key, $value := .Values.extraEnv {{ "}}" }}
+          - name: {{ "{{" }} $key {{ "}}" }}
+            value: {{ "{{" }} $value | quote {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if .Values.extraVars {{ "}}" }}
+    {{ "{{" }}- range $key, $value := .Values.extraVars {{ "}}" }}
+          - name: {{ "{{" }} $key {{ "}}" }}
+            value: {{ "{{" }} $value | quote {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- if .Values.configMaps {{ "}}" }}
+          envFrom:
+    {{ "{{" }}- range .Values.configMaps {{ "}}" }}
+          - configMapRef:
+              name: {{ "{{" }} . | quote {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- end {{ "}}" }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+{{ "{{" }}- if .Values.affinity {{ "}}" }}
+    {{ "{{" }}- with .Values.affinity {{ "}}" }}
+      affinity:
+{{ "{{" }} toYaml . | indent 8 {{ "}}" }}
+    {{ "{{" }}- end {{ "}}" }}
+{{ "{{" }}- else {{ "}}" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - {{ "{{" }} .Release.Name {{ "}}" }}
+              topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: subnet
+                operator: In
+                values:
+                - "{% if cookiecutter.internet_face == 'yes' %}public{% else %}private{% endif %}"
+{{ "{{" }}- end {{ "}}" }}
+{% endif -%}
